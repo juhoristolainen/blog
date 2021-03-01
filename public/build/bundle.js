@@ -1,5 +1,5 @@
 
-(function(l, r) { if (l.getElementById('livereloadscript')) return; r = l.createElement('script'); r.async = 1; r.src = '//' + (window.location.host || 'localhost').split(':')[0] + ':35730/livereload.js?snipver=1'; r.id = 'livereloadscript'; l.getElementsByTagName('head')[0].appendChild(r) })(window.document);
+(function(l, r) { if (l.getElementById('livereloadscript')) return; r = l.createElement('script'); r.async = 1; r.src = '//' + (window.location.host || 'localhost').split(':')[0] + ':35729/livereload.js?snipver=1'; r.id = 'livereloadscript'; l.getElementsByTagName('head')[0].appendChild(r) })(window.document);
 var app = (function () {
     'use strict';
 
@@ -27,6 +27,21 @@ var app = (function () {
     function is_empty(obj) {
         return Object.keys(obj).length === 0;
     }
+    function validate_store(store, name) {
+        if (store != null && typeof store.subscribe !== 'function') {
+            throw new Error(`'${name}' is not a store with a 'subscribe' method`);
+        }
+    }
+    function subscribe(store, ...callbacks) {
+        if (store == null) {
+            return noop;
+        }
+        const unsub = store.subscribe(...callbacks);
+        return unsub.unsubscribe ? () => unsub.unsubscribe() : unsub;
+    }
+    function component_subscribe(component, store, callback) {
+        component.$$.on_destroy.push(subscribe(store, callback));
+    }
 
     function append(target, node) {
         target.appendChild(node);
@@ -46,6 +61,10 @@ var app = (function () {
     function space() {
         return text(' ');
     }
+    function listen(node, event, handler, options) {
+        node.addEventListener(event, handler, options);
+        return () => node.removeEventListener(event, handler, options);
+    }
     function attr(node, attribute, value) {
         if (value == null)
             node.removeAttribute(attribute);
@@ -54,6 +73,9 @@ var app = (function () {
     }
     function children(element) {
         return Array.from(element.childNodes);
+    }
+    function set_input_value(input, value) {
+        input.value = value == null ? '' : value;
     }
     function custom_event(type, detail) {
         const e = document.createEvent('CustomEvent');
@@ -64,6 +86,25 @@ var app = (function () {
     let current_component;
     function set_current_component(component) {
         current_component = component;
+    }
+    function get_current_component() {
+        if (!current_component)
+            throw new Error('Function called outside component initialization');
+        return current_component;
+    }
+    function createEventDispatcher() {
+        const component = get_current_component();
+        return (type, detail) => {
+            const callbacks = component.$$.callbacks[type];
+            if (callbacks) {
+                // TODO are there situations where events could be dispatched
+                // in a server (non-DOM) environment?
+                const event = custom_event(type, detail);
+                callbacks.slice().forEach(fn => {
+                    fn.call(component, event);
+                });
+            }
+        };
     }
 
     const dirty_components = [];
@@ -153,6 +194,12 @@ var app = (function () {
             block.o(local);
         }
     }
+
+    const globals = (typeof window !== 'undefined'
+        ? window
+        : typeof globalThis !== 'undefined'
+            ? globalThis
+            : global);
     function create_component(block) {
         block && block.c();
     }
@@ -295,12 +342,32 @@ var app = (function () {
         dispatch_dev('SvelteDOMRemove', { node });
         detach(node);
     }
+    function listen_dev(node, event, handler, options, has_prevent_default, has_stop_propagation) {
+        const modifiers = options === true ? ['capture'] : options ? Array.from(Object.keys(options)) : [];
+        if (has_prevent_default)
+            modifiers.push('preventDefault');
+        if (has_stop_propagation)
+            modifiers.push('stopPropagation');
+        dispatch_dev('SvelteDOMAddEventListener', { node, event, handler, modifiers });
+        const dispose = listen(node, event, handler, options);
+        return () => {
+            dispatch_dev('SvelteDOMRemoveEventListener', { node, event, handler, modifiers });
+            dispose();
+        };
+    }
     function attr_dev(node, attribute, value) {
         attr(node, attribute, value);
         if (value == null)
             dispatch_dev('SvelteDOMRemoveAttribute', { node, attribute });
         else
             dispatch_dev('SvelteDOMSetAttribute', { node, attribute, value });
+    }
+    function set_data_dev(text, data) {
+        data = '' + data;
+        if (text.wholeText === data)
+            return;
+        dispatch_dev('SvelteDOMSetData', { node: text, data });
+        text.data = data;
     }
     function validate_slots(name, slot, keys) {
         for (const slot_key of Object.keys(slot)) {
@@ -329,31 +396,276 @@ var app = (function () {
         $inject_state() { }
     }
 
+    const subscriber_queue = [];
+    /**
+     * Create a `Writable` store that allows both updating and reading by subscription.
+     * @param {*=}value initial value
+     * @param {StartStopNotifier=}start start and stop notifications for subscriptions
+     */
+    function writable(value, start = noop) {
+        let stop;
+        const subscribers = [];
+        function set(new_value) {
+            if (safe_not_equal(value, new_value)) {
+                value = new_value;
+                if (stop) { // store is ready
+                    const run_queue = !subscriber_queue.length;
+                    for (let i = 0; i < subscribers.length; i += 1) {
+                        const s = subscribers[i];
+                        s[1]();
+                        subscriber_queue.push(s, value);
+                    }
+                    if (run_queue) {
+                        for (let i = 0; i < subscriber_queue.length; i += 2) {
+                            subscriber_queue[i][0](subscriber_queue[i + 1]);
+                        }
+                        subscriber_queue.length = 0;
+                    }
+                }
+            }
+        }
+        function update(fn) {
+            set(fn(value));
+        }
+        function subscribe(run, invalidate = noop) {
+            const subscriber = [run, invalidate];
+            subscribers.push(subscriber);
+            if (subscribers.length === 1) {
+                stop = start(set) || noop;
+            }
+            run(value);
+            return () => {
+                const index = subscribers.indexOf(subscriber);
+                if (index !== -1) {
+                    subscribers.splice(index, 1);
+                }
+                if (subscribers.length === 0) {
+                    stop();
+                    stop = null;
+                }
+            };
+        }
+        return { set, update, subscribe };
+    }
+
+    const kayttaja = writable({ ktun: 'Juho', salasana: 1234 });
+
     /* src\TopBar.svelte generated by Svelte v3.34.0 */
 
+    const { console: console_1 } = globals;
     const file = "src\\TopBar.svelte";
 
-    function create_fragment(ctx) {
+    // (40:0) {:else}
+    function create_else_block(ctx) {
+    	let div1;
+    	let div0;
+    	let h2;
+    	let t0;
+    	let t1;
+    	let t2;
+    	let t3;
+    	let button;
+    	let mounted;
+    	let dispose;
+
+    	const block = {
+    		c: function create() {
+    			div1 = element("div");
+    			div0 = element("div");
+    			h2 = element("h2");
+    			t0 = text("Moikka ");
+    			t1 = text(/*nimi*/ ctx[1]);
+    			t2 = text("!");
+    			t3 = space();
+    			button = element("button");
+    			button.textContent = "Kirjaudu ulos!";
+    			add_location(h2, file, 42, 4, 938);
+    			attr_dev(div0, "class", "tervehdys svelte-1x6r95c");
+    			add_location(div0, file, 41, 2, 909);
+    			attr_dev(button, "class", "kirjauduUlos svelte-1x6r95c");
+    			add_location(button, file, 44, 0, 973);
+    			attr_dev(div1, "class", "kirjautunut svelte-1x6r95c");
+    			add_location(div1, file, 40, 0, 880);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, div1, anchor);
+    			append_dev(div1, div0);
+    			append_dev(div0, h2);
+    			append_dev(h2, t0);
+    			append_dev(h2, t1);
+    			append_dev(h2, t2);
+    			append_dev(div1, t3);
+    			append_dev(div1, button);
+
+    			if (!mounted) {
+    				dispose = listen_dev(button, "click", /*kirjauduUlos*/ ctx[4], false, false, false);
+    				mounted = true;
+    			}
+    		},
+    		p: function update(ctx, dirty) {
+    			if (dirty & /*nimi*/ 2) set_data_dev(t1, /*nimi*/ ctx[1]);
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(div1);
+    			mounted = false;
+    			dispose();
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_else_block.name,
+    		type: "else",
+    		source: "(40:0) {:else}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (32:2) {#if !kirjautunut}
+    function create_if_block(ctx) {
     	let div;
+    	let label0;
+    	let t1;
+    	let input0;
+    	let t2;
+    	let label1;
+    	let t4;
+    	let input1;
+    	let t5;
+    	let button;
+    	let mounted;
+    	let dispose;
 
     	const block = {
     		c: function create() {
     			div = element("div");
-    			div.textContent = "asd";
-    			attr_dev(div, "class", "svelte-kd39b1");
-    			add_location(div, file, 0, 0, 0);
+    			label0 = element("label");
+    			label0.textContent = "Nimi";
+    			t1 = space();
+    			input0 = element("input");
+    			t2 = space();
+    			label1 = element("label");
+    			label1.textContent = "Salasana";
+    			t4 = space();
+    			input1 = element("input");
+    			t5 = space();
+    			button = element("button");
+    			button.textContent = "Kirjaudu sisään!";
+    			attr_dev(label0, "for", "nimi");
+    			attr_dev(label0, "class", "svelte-1x6r95c");
+    			add_location(label0, file, 33, 2, 616);
+    			attr_dev(input0, "type", "text");
+    			attr_dev(input0, "id", "nimi");
+    			attr_dev(input0, "class", "svelte-1x6r95c");
+    			add_location(input0, file, 34, 2, 650);
+    			attr_dev(label1, "for", "salasana");
+    			attr_dev(label1, "class", "svelte-1x6r95c");
+    			add_location(label1, file, 35, 2, 701);
+    			attr_dev(input1, "type", "password");
+    			attr_dev(input1, "id", "salasana");
+    			attr_dev(input1, "class", "svelte-1x6r95c");
+    			add_location(input1, file, 36, 2, 743);
+    			attr_dev(button, "class", "svelte-1x6r95c");
+    			add_location(button, file, 37, 2, 808);
+    			attr_dev(div, "class", "kirjautuminen svelte-1x6r95c");
+    			add_location(div, file, 32, 0, 585);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, div, anchor);
+    			append_dev(div, label0);
+    			append_dev(div, t1);
+    			append_dev(div, input0);
+    			set_input_value(input0, /*nimi*/ ctx[1]);
+    			append_dev(div, t2);
+    			append_dev(div, label1);
+    			append_dev(div, t4);
+    			append_dev(div, input1);
+    			set_input_value(input1, /*salasana*/ ctx[2]);
+    			append_dev(div, t5);
+    			append_dev(div, button);
+
+    			if (!mounted) {
+    				dispose = [
+    					listen_dev(input0, "input", /*input0_input_handler*/ ctx[5]),
+    					listen_dev(input1, "input", /*input1_input_handler*/ ctx[6]),
+    					listen_dev(button, "click", /*kirjaudu*/ ctx[3], false, false, false)
+    				];
+
+    				mounted = true;
+    			}
+    		},
+    		p: function update(ctx, dirty) {
+    			if (dirty & /*nimi*/ 2 && input0.value !== /*nimi*/ ctx[1]) {
+    				set_input_value(input0, /*nimi*/ ctx[1]);
+    			}
+
+    			if (dirty & /*salasana*/ 4 && input1.value !== /*salasana*/ ctx[2]) {
+    				set_input_value(input1, /*salasana*/ ctx[2]);
+    			}
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(div);
+    			mounted = false;
+    			run_all(dispose);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_if_block.name,
+    		type: "if",
+    		source: "(32:2) {#if !kirjautunut}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function create_fragment(ctx) {
+    	let div;
+
+    	function select_block_type(ctx, dirty) {
+    		if (!/*kirjautunut*/ ctx[0]) return create_if_block;
+    		return create_else_block;
+    	}
+
+    	let current_block_type = select_block_type(ctx);
+    	let if_block = current_block_type(ctx);
+
+    	const block = {
+    		c: function create() {
+    			div = element("div");
+    			if_block.c();
+    			attr_dev(div, "class", "palkki svelte-1x6r95c");
+    			add_location(div, file, 30, 0, 541);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, div, anchor);
+    			if_block.m(div, null);
     		},
-    		p: noop,
+    		p: function update(ctx, [dirty]) {
+    			if (current_block_type === (current_block_type = select_block_type(ctx)) && if_block) {
+    				if_block.p(ctx, dirty);
+    			} else {
+    				if_block.d(1);
+    				if_block = current_block_type(ctx);
+
+    				if (if_block) {
+    					if_block.c();
+    					if_block.m(div, null);
+    				}
+    			}
+    		},
     		i: noop,
     		o: noop,
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(div);
+    			if_block.d();
     		}
     	};
 
@@ -368,22 +680,89 @@ var app = (function () {
     	return block;
     }
 
-    function instance($$self, $$props) {
+    function instance($$self, $$props, $$invalidate) {
+    	let $kayttaja;
+    	validate_store(kayttaja, "kayttaja");
+    	component_subscribe($$self, kayttaja, $$value => $$invalidate(7, $kayttaja = $$value));
     	let { $$slots: slots = {}, $$scope } = $$props;
     	validate_slots("TopBar", slots, []);
-    	const writable_props = [];
+    	const dispatch = createEventDispatcher();
+    	let nimi;
+    	let salasana;
+    	let { kirjautunut } = $$props;
+
+    	function kirjaudu() {
+    		if (nimi === $kayttaja.ktun && salasana === $kayttaja.salasana.toString()) {
+    			console.log("Moikka " + nimi + "!");
+    			dispatch("kirjaudu");
+    		} else {
+    			console.log("Väärä tunnus!");
+    		}
+    	}
+
+    	function kirjauduUlos() {
+    		$$invalidate(0, kirjautunut = false);
+    		$$invalidate(1, nimi = "");
+    		$$invalidate(2, salasana = "");
+    	}
+
+    	const writable_props = ["kirjautunut"];
 
     	Object.keys($$props).forEach(key => {
-    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== "$$") console.warn(`<TopBar> was created with unknown prop '${key}'`);
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== "$$") console_1.warn(`<TopBar> was created with unknown prop '${key}'`);
     	});
 
-    	return [];
+    	function input0_input_handler() {
+    		nimi = this.value;
+    		$$invalidate(1, nimi);
+    	}
+
+    	function input1_input_handler() {
+    		salasana = this.value;
+    		$$invalidate(2, salasana);
+    	}
+
+    	$$self.$$set = $$props => {
+    		if ("kirjautunut" in $$props) $$invalidate(0, kirjautunut = $$props.kirjautunut);
+    	};
+
+    	$$self.$capture_state = () => ({
+    		createEventDispatcher,
+    		dispatch,
+    		kayttaja,
+    		nimi,
+    		salasana,
+    		kirjautunut,
+    		kirjaudu,
+    		kirjauduUlos,
+    		$kayttaja
+    	});
+
+    	$$self.$inject_state = $$props => {
+    		if ("nimi" in $$props) $$invalidate(1, nimi = $$props.nimi);
+    		if ("salasana" in $$props) $$invalidate(2, salasana = $$props.salasana);
+    		if ("kirjautunut" in $$props) $$invalidate(0, kirjautunut = $$props.kirjautunut);
+    	};
+
+    	if ($$props && "$$inject" in $$props) {
+    		$$self.$inject_state($$props.$$inject);
+    	}
+
+    	return [
+    		kirjautunut,
+    		nimi,
+    		salasana,
+    		kirjaudu,
+    		kirjauduUlos,
+    		input0_input_handler,
+    		input1_input_handler
+    	];
     }
 
     class TopBar extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init(this, options, instance, create_fragment, safe_not_equal, {});
+    		init(this, options, instance, create_fragment, safe_not_equal, { kirjautunut: 0 });
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
@@ -391,6 +770,21 @@ var app = (function () {
     			options,
     			id: create_fragment.name
     		});
+
+    		const { ctx } = this.$$;
+    		const props = options.props || {};
+
+    		if (/*kirjautunut*/ ctx[0] === undefined && !("kirjautunut" in props)) {
+    			console_1.warn("<TopBar> was created without expected prop 'kirjautunut'");
+    		}
+    	}
+
+    	get kirjautunut() {
+    		throw new Error("<TopBar>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set kirjautunut(value) {
+    		throw new Error("<TopBar>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
     }
 
@@ -405,7 +799,7 @@ var app = (function () {
     		c: function create() {
     			div = element("div");
     			div.textContent = "asd";
-    			attr_dev(div, "class", "svelte-vwj9js");
+    			attr_dev(div, "class", "svelte-1veehme");
     			add_location(div, file$1, 0, 0, 0);
     		},
     		l: function claim(nodes) {
@@ -652,7 +1046,15 @@ var app = (function () {
     	let t1;
     	let onscreen;
     	let current;
-    	topbar = new TopBar({ $$inline: true });
+
+    	topbar = new TopBar({
+    			props: {
+    				kirjautunut: /*kirjautunutSisaan*/ ctx[0]
+    			},
+    			$$inline: true
+    		});
+
+    	topbar.$on("kirjaudu", /*kirjauduSisaan*/ ctx[1]);
     	sidebar = new Sidebar({ $$inline: true });
     	onscreen = new OnScreen({ $$inline: true });
 
@@ -675,7 +1077,11 @@ var app = (function () {
     			mount_component(onscreen, target, anchor);
     			current = true;
     		},
-    		p: noop,
+    		p: function update(ctx, [dirty]) {
+    			const topbar_changes = {};
+    			if (dirty & /*kirjautunutSisaan*/ 1) topbar_changes.kirjautunut = /*kirjautunutSisaan*/ ctx[0];
+    			topbar.$set(topbar_changes);
+    		},
     		i: function intro(local) {
     			if (current) return;
     			transition_in(topbar.$$.fragment, local);
@@ -712,14 +1118,35 @@ var app = (function () {
     function instance$4($$self, $$props, $$invalidate) {
     	let { $$slots: slots = {}, $$scope } = $$props;
     	validate_slots("App", slots, []);
+    	let kirjautunutSisaan = false;
+
+    	function kirjauduSisaan() {
+    		$$invalidate(0, kirjautunutSisaan = true);
+    	}
+
     	const writable_props = [];
 
     	Object.keys($$props).forEach(key => {
     		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== "$$") console.warn(`<App> was created with unknown prop '${key}'`);
     	});
 
-    	$$self.$capture_state = () => ({ TopBar, Sidebar, OnScreen });
-    	return [];
+    	$$self.$capture_state = () => ({
+    		TopBar,
+    		Sidebar,
+    		OnScreen,
+    		kirjautunutSisaan,
+    		kirjauduSisaan
+    	});
+
+    	$$self.$inject_state = $$props => {
+    		if ("kirjautunutSisaan" in $$props) $$invalidate(0, kirjautunutSisaan = $$props.kirjautunutSisaan);
+    	};
+
+    	if ($$props && "$$inject" in $$props) {
+    		$$self.$inject_state($$props.$$inject);
+    	}
+
+    	return [kirjautunutSisaan, kirjauduSisaan];
     }
 
     class App extends SvelteComponentDev {

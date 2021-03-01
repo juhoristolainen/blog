@@ -1,19 +1,86 @@
-<div>
-asd
+<script>
+import { createEventDispatcher } from 'svelte';
+
+const dispatch = createEventDispatcher();
+
+  import kayttaja from './kayttajat.js';
+
+  let nimi;
+  let salasana;
+  export let kirjautunut;
+
+
+
+function kirjaudu(){
+  if(nimi === $kayttaja.ktun && salasana === $kayttaja.salasana.toString()){
+    console.log('Moikka ' + nimi + '!');
+    dispatch('kirjaudu');    
+  }else{
+    console.log('Väärä tunnus!');
+  }
+}
+
+function kirjauduUlos(){
+  kirjautunut = false;
+  nimi = '';
+  salasana = '';
+}
+
+</script>
+
+<div class="palkki">
+  {#if !kirjautunut}
+<div class="kirjautuminen">
+  <label for="nimi">Nimi</label>
+  <input type="text" id="nimi" bind:value={nimi}>
+  <label for="salasana">Salasana</label>
+  <input type="password" id="salasana" bind:value={salasana}>  
+  <button on:click={kirjaudu}>Kirjaudu sisään!</button>
+</div>
+{:else}
+<div class="kirjautunut">
+  <div class="tervehdys">
+    <h2>Moikka {nimi}!</h2>
+  </div>
+<button class="kirjauduUlos" on:click={kirjauduUlos}>Kirjaudu ulos!</button>
+</div>
+{/if}
 </div>
 
 <style>
   div{
-    background-color: #2b2d42;
+    background-color: #14213d;
     position: fixed;
     top: 0;
     left:0;
     height: 7em;
     width: 100%;
     color: white;
-    border-radius: 0 0 15px 0;
-    box-shadow: 0 2px 5px #2b2d42;
+    border-radius: 0 0 10px 0;
+    box-shadow: 0 2px 5px #14213d;
     z-index: 10;
   }
+
+label, input, button{
+  position: relative;
+  display: inline;
+  top: 30%;
+  left: 65%
+}
+
+.kirjauduUlos{
+  position: relative;
+  left: 91.5%;
+  z-index: 10;
+}
+
+.tervehdys{
+  position: absolute;
+  left: 80%;
+  top: 1em;
+  height: 1em;
+  width: 10em;
+}
+
 </style>
 
