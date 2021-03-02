@@ -10,13 +10,14 @@ const dispatch = createEventDispatcher();
   let nimi;
   let salasana;
   export let kirjautunut;
-  let vaaratunnus = true;
+  let vaaratunnus = false;
 
 
 //Tarkistaa mikäli syötetty nimi ja salasana ovat oikein. Jos ovat, niin lähettää juurikomponentille 'kirjaudu'-dispatchin.
 function kirjaudu(){
   if(nimi === $kayttaja.ktun && salasana === $kayttaja.salasana.toString()){
     dispatch('kirjaudu');    
+    vaaratunnus = false;
   }else{
     vaaratunnus = true;
   }
@@ -56,6 +57,7 @@ const muuntaja = new Intl.DateTimeFormat('fi',{
 </div>
 {:else}
 <div class="kirjautunut">
+  <button class="uusipostaus" on:click={(()=> dispatch('uusipostaus'))}>Uusi postaus</button>
   <div class="tervehdys">
     <h2>Moikka {nimi}!</h2>
   </div>
@@ -75,7 +77,7 @@ const muuntaja = new Intl.DateTimeFormat('fi',{
     width: 100%;
     color: white;
     border-radius: 0 0 10px 0;
-    box-shadow: 0 2px 5px #14213d;
+    box-shadow: 0 2px 15px #14213d;
     z-index: 10;
   }
 
@@ -83,7 +85,8 @@ label, input, button{
   position: relative;
   display: inline;
   top: 30%;
-  left: 65%
+  left: 65%;
+  z-index: 12;
 }
 
 .kirjauduUlos{
@@ -112,6 +115,15 @@ h1{
   left: 85%;
   top: 60%;
   color: red;
+}
+
+.uusipostaus{
+  position: absolute;
+  left: 70%;
+}
+
+button:hover{
+  background-color: rgb(207, 207, 207);
 }
 
 </style>
