@@ -10,13 +10,14 @@ const dispatch = createEventDispatcher();
   let nimi;
   let salasana;
   export let kirjautunut;
-  let vaaratunnus = true;
+  let vaaratunnus = false;
 
 
 //Tarkistaa mikäli syötetty nimi ja salasana ovat oikein. Jos ovat, niin lähettää juurikomponentille 'kirjaudu'-dispatchin.
 function kirjaudu(){
   if(nimi === $kayttaja.ktun && salasana === $kayttaja.salasana.toString()){
     dispatch('kirjaudu');    
+    vaaratunnus = false;
   }else{
     vaaratunnus = true;
   }
@@ -83,7 +84,8 @@ label, input, button{
   position: relative;
   display: inline;
   top: 30%;
-  left: 65%
+  left: 65%;
+  z-index: 12;
 }
 
 .kirjauduUlos{
