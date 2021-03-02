@@ -57,6 +57,7 @@ const muuntaja = new Intl.DateTimeFormat('fi',{
 </div>
 {:else}
 <div class="kirjautunut">
+  <button class="uusipostaus" on:click={(()=> dispatch('uusipostaus'))}>Uusi postaus</button>
   <div class="tervehdys">
     <h2>Moikka {nimi}!</h2>
   </div>
@@ -76,7 +77,7 @@ const muuntaja = new Intl.DateTimeFormat('fi',{
     width: 100%;
     color: white;
     border-radius: 0 0 10px 0;
-    box-shadow: 0 2px 5px #14213d;
+    box-shadow: 0 2px 15px #14213d;
     z-index: 10;
   }
 
@@ -114,6 +115,15 @@ h1{
   left: 85%;
   top: 60%;
   color: red;
+}
+
+.uusipostaus{
+  position: absolute;
+  left: 70%;
+}
+
+button:hover{
+  background-color: rgb(207, 207, 207);
 }
 
 </style>

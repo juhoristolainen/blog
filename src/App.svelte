@@ -7,19 +7,20 @@ import Kirjoittaminen from './UusiBlogi.svelte';
 let kirjautunutSisaan = false;
 let bloginLuonti = false;
 
-function kirjauduSisaan(){
-  kirjautunutSisaan = true;
-}
 
 </script>
-
-<TopBar on:kirjaudu={kirjauduSisaan} kirjautunut={kirjautunutSisaan}/>
+<div class="sivu">
+<TopBar on:kirjaudu={(()=> kirjautunutSisaan = true)} kirjautunut={kirjautunutSisaan} on:uusipostaus={(() => bloginLuonti = true)}/>
 <Sidebar />
 <OnScreen />
 {#if bloginLuonti}
-<Kirjoittaminen />
+<Kirjoittaminen on:luotu={(()=>bloginLuonti = false)} on:peruuta={(()=>bloginLuonti = false)}/>
 {/if}
+</div>
+
 
 <style> 
-
+.sivu{
+  max-width: 100%;
+}
 </style>

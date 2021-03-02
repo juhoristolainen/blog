@@ -1,6 +1,9 @@
 <script>
   import kayttaja from './kayttajat.js';
   import postaus from './postaukset.js';
+  import { createEventDispatcher } from 'svelte';
+
+  const dispatch = createEventDispatcher();
 
   class Blogi{
 
@@ -14,20 +17,25 @@
   }
 
   let kirjoitus = '';
+  let otsikko = '';
 
   const luoPostaus = function() {
-    const uusiPostaus = new Blogi($kayttaja.ktun, 'Maailman parantaminen', ['on', 'jees'], kirjoitus)
+    const uusiPostaus = new Blogi($kayttaja.ktun, otsikko, ['on', 'jees'], kirjoitus)
     postaus.update((p) => [...p, uusiPostaus]);
+    dispatch('luotu');
   }
 
 </script>
 
 <div class="modal">
 <div class="kirjoitus">
-<h2>Uusi postaus</h2>
+<h2>Luo uusi postaus</h2>
+<div>Otsikko</div>
+<input class="otsikko" type="text" bind:value={otsikko}>
+<div>Teksti</div>
 <textarea name="" id="" cols="151" rows="20" bind:value={kirjoitus}></textarea>
 <div class="napit">
-  <button>Peruuta</button>
+  <button on:click={(()=>dispatch('peruuta'))}>Peruuta</button>
   <button on:click={luoPostaus}>Lähetä</button>
 </div>
 </div>
@@ -59,5 +67,14 @@
   .kirjoitus textarea{
     margin: 1em;
   }
+
+  .otsikko{
+    width: 75%;
+    font-size: 30px;
+  }
+
+  button:hover{
+  background-color: rgb(207, 207, 207);
+}
 
 </style>
