@@ -1,22 +1,24 @@
 <script>
 import { createEventDispatcher } from 'svelte';
+import { space } from 'svelte/internal';
 
 const dispatch = createEventDispatcher();
 
   import kayttaja from './kayttajat.js';
+  import { pvm } from './paivamaara.js';
 
   let nimi;
   let salasana;
   export let kirjautunut;
+  let vaaratunnus = true;
 
 
-
+//Tarkistaa mikäli syötetty nimi ja salasana ovat oikein. Jos ovat, niin lähettää juurikomponentille 'kirjaudu'-dispatchin.
 function kirjaudu(){
   if(nimi === $kayttaja.ktun && salasana === $kayttaja.salasana.toString()){
-    console.log('Moikka ' + nimi + '!');
     dispatch('kirjaudu');    
   }else{
-    console.log('Väärä tunnus!');
+    vaaratunnus = true;
   }
 }
 
@@ -26,11 +28,26 @@ function kirjauduUlos(){
   salasana = '';
 }
 
-</script>
+//Apuna käytetty https://svelte.dev/tutorial/readable-stores
+const muuntaja = new Intl.DateTimeFormat('fi',{
+  hour12: false,
+  hour: 'numeric',
+  minute: '2-digit',
+  second: '2-digit',
+  day: '2-digit',
+  month: '2-digit',
+});
 
+
+
+
+</script>
 <div class="palkki">
   {#if !kirjautunut}
 <div class="kirjautuminen">
+  {#if vaaratunnus}
+  <span class ="vaaratunnus">Väärä käyttäjätunnus tai salasana</span>
+  {/if}
   <label for="nimi">Nimi</label>
   <input type="text" id="nimi" bind:value={nimi}>
   <label for="salasana">Salasana</label>
@@ -45,6 +62,7 @@ function kirjauduUlos(){
 <button class="kirjauduUlos" on:click={kirjauduUlos}>Kirjaudu ulos!</button>
 </div>
 {/if}
+<h1>{muuntaja.format($pvm)}</h1>
 </div>
 
 <style>
@@ -80,6 +98,20 @@ label, input, button{
   top: 1em;
   height: 1em;
   width: 10em;
+}
+
+h1{
+  z-index: 10;
+  color: #edf2f4;
+  position: absolute;
+  left: 1%;
+}
+
+.vaaratunnus{
+  position: absolute;
+  left: 85%;
+  top: 60%;
+  color: red;
 }
 
 </style>
