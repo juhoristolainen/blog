@@ -1,7 +1,5 @@
 <script>
-import { createEventDispatcher } from 'svelte';
-import { space } from 'svelte/internal';
-
+import { createEventDispatcher, onMount } from 'svelte';
 const dispatch = createEventDispatcher();
 
   import kayttaja from './kayttajat.js';
@@ -15,11 +13,16 @@ const dispatch = createEventDispatcher();
 
 //Tarkistaa mikäli syötetty nimi ja salasana ovat oikein. Jos ovat, niin lähettää juurikomponentille 'kirjaudu'-dispatchin.
 function kirjaudu(){
-  if(nimi === $kayttaja.ktun && salasana === $kayttaja.salasana.toString()){
-    dispatch('kirjaudu');    
-    vaaratunnus = false;
-  }else{
-    vaaratunnus = true;
+  for(let i = 0; i < $kayttaja.length; i++){
+    if(nimi === $kayttaja[i].nimi){
+      if(salasana === $kayttaja[i].salasana){
+        kirjautunut = true;
+      }else{
+        vaaratunnus = true;
+      }
+    }else{
+      vaaratunnus = true;
+    }
   }
 }
 
@@ -27,6 +30,7 @@ function kirjauduUlos(){
   kirjautunut = false;
   nimi = '';
   salasana = '';
+  vaaratunnus = false;
 }
 
 //Apuna käytetty https://svelte.dev/tutorial/readable-stores
@@ -41,7 +45,6 @@ const muuntaja = new Intl.DateTimeFormat('fi',{
 
 
 
-
 </script>
 <div class="palkki">
   {#if !kirjautunut}
@@ -51,6 +54,7 @@ const muuntaja = new Intl.DateTimeFormat('fi',{
   {/if}
   <label for="nimi">Nimi</label>
   <input type="text" id="nimi" bind:value={nimi}>
+  <button class="rekisteroidy" on:click={(()=>dispatch('rekisteroidy'))}>Rekisteröidy</button>
   <label for="salasana">Salasana</label>
   <input type="password" id="salasana" bind:value={salasana}>  
   <button on:click={kirjaudu}>Kirjaudu sisään!</button>
@@ -68,30 +72,41 @@ const muuntaja = new Intl.DateTimeFormat('fi',{
 </div>
 
 <style>
-  div{
+  .palkki{
     background-color: #14213d;
+    display: flex;
     position: fixed;
     top: 0;
     left:0;
-    height: 7em;
+    height: 8em;
     width: 100%;
     color: white;
-    border-radius: 0 0 10px 0;
+    border-radius: 0 0 10px 10px;
     box-shadow: 0 2px 15px #14213d;
     z-index: 10;
+    justify-content: flex-end;
+    align-items: center;
   }
 
-label, input, button{
+label{
+  position: relative;
+  /* top: 37%;
+  left: 65%; */
+}
+
+ input, button{
   position: relative;
   display: inline;
-  top: 30%;
-  left: 65%;
+  /* top: 30%;
+  left: 65%; */
   z-index: 12;
+  height: 2.5rem;
+  margin: 0 0.1em;
 }
 
 .kirjauduUlos{
   position: relative;
-  left: 91.5%;
+  left: 0%;
   z-index: 10;
 }
 
@@ -112,8 +127,8 @@ h1{
 
 .vaaratunnus{
   position: absolute;
-  left: 85%;
-  top: 60%;
+  left: 87%;
+  top: 50%;
   color: red;
 }
 
@@ -124,6 +139,11 @@ h1{
 
 button:hover{
   background-color: rgb(207, 207, 207);
+}
+
+.rekisteroidy{
+  background-color: #8d99ae;
+  color: #edf2f4;
 }
 
 </style>

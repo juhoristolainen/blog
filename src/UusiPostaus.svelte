@@ -1,32 +1,41 @@
 <script>
   import kayttaja from './kayttajat.js';
   import postaus from './postaukset.js';
+  import OnScreen from './OnScreen.svelte';
   import { createEventDispatcher } from 'svelte';
 
   const dispatch = createEventDispatcher();
 
-  class Blogi{
-
-    constructor(kirjoittaja, otsikko, tagit, teksti){
-      this.kirjoittaja = kirjoittaja;
-      this.otsikko = otsikko;
-      this.tagit = tagit;
-      this.teksti = teksti;
-    }
-
-  }
+  let fbUrl = 'https://blogi-b5d8f-default-rtdb.europe-west1.firebasedatabase.app/';
 
   let kirjoitus = '';
   let otsikko = '';
 
-  const luoPostaus = function() {
-    const uusiPostaus = new Blogi($kayttaja.ktun, otsikko, ['on', 'jees'], kirjoitus)
-    postaus.update((p) => [...p, uusiPostaus]);
-    dispatch('luotu');
-  }
+//Kopioitu frontend kurssin materiaaleista ja säädetty toimimaan oikealla tavalla
+  const uusiPostaus = (postaus) => {
+		fetch(`${fbUrl}postaukset.json`, {
+			method : 'POST',
+			body: JSON.stringify(postaus),
+			headers:{
+				'Content-Type': 'application/json',
+			},
+		})
+		.then((response) => {
+			if(!response.ok){
+				throw new Error('Lisääminen ei onnistu');
+			}
+      dispatch('luotu');
+		})
+		.catch((err)=>{
+			console.log(err);
+		})
+		
+	}
+
+
 
 </script>
-
+//Modali tehty Tikokaupan modalin mukaan.
 <div class="modal">
 <div class="kirjoitus">
 <h2>Luo uusi postaus</h2>
@@ -36,7 +45,7 @@
 <textarea name="" id="" cols="151" rows="20" bind:value={kirjoitus}></textarea>
 <div class="napit">
   <button on:click={(()=>dispatch('peruuta'))}>Peruuta</button>
-  <button on:click={luoPostaus}>Lähetä</button>
+  <button on:click={(() => uusiPostaus({kirjoittaja: $kayttaja.ktun,otsikko: otsikko, postaus: kirjoitus }))}>Lähetä</button>
 </div>
 </div>
 </div>
