@@ -25,7 +25,4 @@ let rekisteroityminen = false;
 
 
 <style> 
-.sivu{
-  max-width: 100%;
-}
 </style>

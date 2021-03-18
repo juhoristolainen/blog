@@ -8,6 +8,7 @@ let uusiSalasana;
 let validiNimi = true;
 let validiSalasana = true;
 
+//Tarkistaa, että käyttäjatunnus ja salasana on validi. Tämän jälkeen luo uuden käyttäjän firebaseen.
 const luoKayttaja = function(kayttaja){
   if(kayttaja.nimi.length > 3){
     validiNimi = true;
@@ -53,11 +54,13 @@ const peruuta = function(){
     <h2>REKISTERÖIDY</h2>
     <label for="uusinimi">Nimi</label>
     <input type="text" bind:value={uusiNimi} id="uusinimi" placeholder="Syötä nimesi">
+    //Mikäli nimi on ei ole validi, niin näyttää virheilmoituksen.
     {#if !validiNimi}
     <span class="virhe">Käyttäjätunnuksessa täytyy olla vähintään neljä merkkiä!</span>
     {/if}
     <label for="uusisalasana">Salasana</label>
     <input type="password" bind:value={uusiSalasana} id="uusisalasana" placeholder="Syötä salasana">
+    //Mikäli salasana on ei ole validi, niin näyttää virheilmoituksen.
     {#if !validiSalasana}
     <span class="virhe">Salasanassa täytyy olla vähintään neljä merkkiä!</span>
     {/if}

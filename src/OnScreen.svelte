@@ -5,7 +5,7 @@
   let fbUrl = 'https://blogi-b5d8f-default-rtdb.europe-west1.firebasedatabase.app/';
 
   
-//Kopioitu frontend kurssin materiaaleista ja säädetty toimimaan oikealla tavalla
+//Hakee postaukset firebasesta. Kopioitu frontend kurssin materiaaleista ja säädetty toimimaan oikealla tavalla
   const haePostaus = async() => {
 		postaus = [];
 		const response = await fetch(
@@ -24,7 +24,7 @@
 
 haePostaus();
 
-//Kopioitu frontend kurssin materiaaleista ja säädetty toimimaan oikealla tavalla
+//Poistaa postauksen firebasesta. Kopioitu frontend kurssin materiaaleista ja säädetty toimimaan oikealla tavalla
   const poistaPostaus = (id) => {
 		fetch(`${fbUrl}postaukset/${id}.json`,{
 			method: 'DELETE',

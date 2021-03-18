@@ -1,4 +1,3 @@
-import { afterUpdate } from 'svelte';
 import { writable } from 'svelte/store';
 let kayttajat = [];
 let fbUrl =
@@ -6,6 +5,7 @@ let fbUrl =
 
 const kayttaja = writable({});
 
+//Hakee käyttäjätiedot firebasesta.
 const haeKayttajat = async () => {
   const response = await fetch(`${fbUrl}kayttajat.json`);
   if (!response.ok) {

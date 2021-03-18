@@ -1,7 +1,5 @@
 <script>
-  import kayttaja from './kayttajat.js';
-  import postaus from './postaukset.js';
-  import OnScreen from './OnScreen.svelte';
+  import kirjautunutKayttaja from './kirjautunut.js';
   import { createEventDispatcher } from 'svelte';
 
   const dispatch = createEventDispatcher();
@@ -10,8 +8,8 @@
 
   let kirjoitus = '';
   let otsikko = '';
-
-//Kopioitu frontend kurssin materiaaleista ja säädetty toimimaan oikealla tavalla
+  let nimi;
+//Luo uuden postauksen firebaseen. Kopioitu frontend kurssin materiaaleista ja säädetty toimimaan oikealla tavalla
   const uusiPostaus = (postaus) => {
 		fetch(`${fbUrl}postaukset.json`, {
 			method : 'POST',
@@ -45,7 +43,7 @@
 <textarea name="" id="" cols="151" rows="20" bind:value={kirjoitus}></textarea>
 <div class="napit">
   <button on:click={(()=>dispatch('peruuta'))}>Peruuta</button>
-  <button on:click={(() => uusiPostaus({kirjoittaja: $kayttaja.ktun,otsikko: otsikko, postaus: kirjoitus }))}>Lähetä</button>
+  <button on:click={(() => uusiPostaus({kirjoittaja: $kirjautunutKayttaja,otsikko: otsikko, postaus: kirjoitus }))}>Lähetä</button>
 </div>
 </div>
 </div>

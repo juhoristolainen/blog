@@ -1,8 +1,9 @@
 <script>
-import { createEventDispatcher, onMount } from 'svelte';
+import { createEventDispatcher } from 'svelte';
 const dispatch = createEventDispatcher();
 
   import kayttaja from './kayttajat.js';
+  import kirjautunutKayttaja from './kirjautunut.js';
   import { pvm } from './paivamaara.js';
 
   let nimi;
@@ -17,6 +18,7 @@ function kirjaudu(){
     if(nimi === $kayttaja[i].nimi){
       if(salasana === $kayttaja[i].salasana){
         kirjautunut = true;
+        kirjautunutKayttaja.set($kayttaja[i].nimi);
       }else{
         vaaratunnus = true;
       }
@@ -31,6 +33,7 @@ function kirjauduUlos(){
   nimi = '';
   salasana = '';
   vaaratunnus = false;
+  kirjautunutKayttaja.set();
 }
 
 //Apuna käytetty https://svelte.dev/tutorial/readable-stores
@@ -44,8 +47,9 @@ const muuntaja = new Intl.DateTimeFormat('fi',{
 });
 
 
-
 </script>
+
+
 <div class="palkki">
   {#if !kirjautunut}
 <div class="kirjautuminen">
