@@ -7,4 +7,4 @@ Pikablogi on hieman twitteriin verrattavissa oleva sivusto johon käyttäjät vo
 ## Linkit
 
 Roskiksen kuva iconfinder.com
-Satunnaista tieto svelte.dev ja stackoverflow.com
+Satunnaista tietoa svelte.dev ja stackoverflow.com
