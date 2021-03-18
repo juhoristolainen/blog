@@ -33,14 +33,14 @@
 
 
 </script>
-//Modali tehty Tikokaupan modalin mukaan.
+<!--Modali tehty Tikokaupan modalin mukaan.-->
 <div class="modal">
 <div class="kirjoitus">
 <h2>Luo uusi postaus</h2>
 <div>Otsikko</div>
 <input class="otsikko" type="text" bind:value={otsikko}>
 <div>Teksti</div>
-<textarea name="" id="" cols="151" rows="20" bind:value={kirjoitus}></textarea>
+<textarea name="" id="" cols="151" rows="15" bind:value={kirjoitus}></textarea>
 <div class="napit">
   <button on:click={(()=>dispatch('peruuta'))}>Peruuta</button>
   <button on:click={(() => uusiPostaus({kirjoittaja: $kirjautunutKayttaja,otsikko: otsikko, postaus: kirjoitus }))}>Lähetä</button>

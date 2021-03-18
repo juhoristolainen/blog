@@ -1,5 +1,6 @@
 <script>
-import { createEventDispatcher, onMount } from 'svelte';
+import { createEventDispatcher } from 'svelte';
+import { scale } from 'svelte/transition';
 const dispatch = createEventDispatcher();
 
 let fbUrl = 'https://blogi-b5d8f-default-rtdb.europe-west1.firebasedatabase.app/';
@@ -50,17 +51,17 @@ const peruuta = function(){
 </script>
 //Modali tehty Tikokaupan modalin mukaan.
 <div class="modal">
-  <div class="rekisteroidy">
+  <div class="rekisteroidy" transition:scale>
     <h2>REKISTERÖIDY</h2>
     <label for="uusinimi">Nimi</label>
     <input type="text" bind:value={uusiNimi} id="uusinimi" placeholder="Syötä nimesi">
-    //Mikäli nimi on ei ole validi, niin näyttää virheilmoituksen.
+    <!-- Mikäli nimi on ei ole validi, niin näyttää virheilmoituksen. -->
     {#if !validiNimi}
     <span class="virhe">Käyttäjätunnuksessa täytyy olla vähintään neljä merkkiä!</span>
     {/if}
     <label for="uusisalasana">Salasana</label>
     <input type="password" bind:value={uusiSalasana} id="uusisalasana" placeholder="Syötä salasana">
-    //Mikäli salasana on ei ole validi, niin näyttää virheilmoituksen.
+    <!--Mikäli salasana on ei ole validi, niin näyttää virheilmoituksen. -->
     {#if !validiSalasana}
     <span class="virhe">Salasanassa täytyy olla vähintään neljä merkkiä!</span>
     {/if}

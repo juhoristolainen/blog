@@ -44,6 +44,7 @@ haePostaus();
 </script>
 
 <div>
+    <!-- Julkaisee postaukset -->
     {#each postaus as posti(posti.id)}
     <div class="postaus">
       <h1>{posti.otsikko}</h1>
@@ -72,6 +73,7 @@ haePostaus();
     position: relative;
     left: 2em;
     width: 5em;
+    word-wrap: break-word;
   }
 
   div h1, h2, h3, h4{
@@ -81,9 +83,10 @@ haePostaus();
   .paivita{
     position: fixed;
     left: 0.5em;
-    top: 4em;
+    top: 8em;
     z-index: 11;
-    font-size: 32px;
+    width: 8%;
+    height: 8%
   }
 
   .postaus{

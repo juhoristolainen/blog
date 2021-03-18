@@ -12,7 +12,8 @@ const dispatch = createEventDispatcher();
   let vaaratunnus = false;
 
 
-//Tarkistaa mikäli syötetty nimi ja salasana ovat oikein. Jos ovat, niin lähettää juurikomponentille 'kirjaudu'-dispatchin.
+//Tarkistaa mikäli syötetty nimi ja salasana ovat oikein. Jos ovat, niin lähettää juurikomponentille 'kirjaudu'-dispatchin 
+// ja asettaa kirjautunut-storen arvoksi käyttäjänimen.
 function kirjaudu(){
   for(let i = 0; i < $kayttaja.length; i++){
     if(nimi === $kayttaja[i].nimi){
