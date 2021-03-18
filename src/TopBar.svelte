@@ -34,7 +34,7 @@ function kirjauduUlos(){
   nimi = '';
   salasana = '';
   vaaratunnus = false;
-  kirjautunutKayttaja.set();
+  kirjautunutKayttaja.set('');
 }
 
 //Apuna käytetty https://svelte.dev/tutorial/readable-stores
@@ -95,15 +95,11 @@ const muuntaja = new Intl.DateTimeFormat('fi',{
 
 label{
   position: relative;
-  /* top: 37%;
-  left: 65%; */
 }
 
  input, button{
   position: relative;
   display: inline;
-  /* top: 30%;
-  left: 65%; */
   z-index: 12;
   height: 2.5rem;
   margin: 0 0.1em;

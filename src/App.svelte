@@ -9,8 +9,6 @@ let bloginLuonti = false;
 let rekisteroityminen = false;
 
 
-
-
 </script>
 <div class="sivu">
 <TopBar on:kirjaudu={(()=> kirjautunutSisaan = true)} kirjautunut={kirjautunutSisaan} on:uusipostaus={(() => bloginLuonti = true)} on:rekisteroidy={(()=> rekisteroityminen = true)}/>

@@ -1,5 +1,5 @@
 import { writable } from 'svelte/store';
 
-const kirjautunutKayttaja = writable([{}]);
+const kirjautunutKayttaja = writable('');
 
 export default kirjautunutKayttaja;
