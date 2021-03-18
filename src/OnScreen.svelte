@@ -1,5 +1,5 @@
 <script>
-  import postaukset from './postaukset.js'; 
+  // import postaukset from './postaukset.js'; 
 
   let postaus = [];
   let fbUrl = 'https://blogi-b5d8f-default-rtdb.europe-west1.firebasedatabase.app/';

@@ -1,5 +1,5 @@
-import { writable } from 'svelte/store';
+// import { writable } from 'svelte/store';
 
-const postaus = writable([{}]);
+// const postaus = writable([{}]);
 
-export default postaus;
+// export default postaus;
